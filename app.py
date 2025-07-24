@@ -32,49 +32,29 @@ def index():
     logger.info("Home page accessed")
     return render_template('index.html')
 
-@app.route('/api/get_weather', methods=['POST'])
+@app.route('/api/weather', methods=['GET'])
 def get_weather():
-    """获取天气数据API - 支持完整数据返回"""
-    try:
-        data = request.json
-        city = data.get('city', '').strip()
-        
-        if not city:
-            logger.warning("Missing city parameter in request")
-            return jsonify({
-                'status': 'error',
-                'error': 'City parameter is required',
-                'message': '请输入城市名称'
-            }), 400
-        
-        # 尝试解码可能被错误编码的城市名
-        try:
-            city = urllib.parse.unquote(city)
-        except Exception as e:
-            logger.warning(f"Error decoding city name: {str(e)}")
-        
-        logger.info(f"Fetching weather data for city: {city}")
-        weather_data = get_weather_data(city, config)
-        logger.info(f"Successfully fetched weather data for city: {city}")
-        
+    # 从URL参数中获取城市名（与前端fetch一致）
+    city = request.args.get('city', '').strip()
+    
+    if not city:
+        logger.warning("城市名未提供")
         return jsonify({
-            'status': 'success',
-            'data': weather_data
-        })
-        
-    except ValueError as e:
-        logger.warning(f"Validation error: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'error': 'Validation Error',
-            'message': str(e)
+            'error': '城市名未提供',
+            'message': '请输入城市名'
         }), 400
+    
+    try:
+        # 调用优化后的get_weather_data，获取完整天气数据
+        # 包含温度、体感、风向、气压、能见度等所有字段
+        weather_data = get_weather_data(city, config)
+        logger.info(f"成功获取完整天气数据: {city}")
+        return jsonify(weather_data)  # 直接返回原始数据，与前端预期结构一致
     except Exception as e:
-        logger.error(f"Error fetching weather data: {str(e)}")
+        logger.error(f"获取天气数据失败: {str(e)}")
         return jsonify({
-            'status': 'error',
-            'error': 'Server Error',
-            'message': '获取天气数据失败，请稍后重试'
+            'error': str(e),
+            'message': '未能获取天气信息'
         }), 500
 
 @app.errorhandler(404)
