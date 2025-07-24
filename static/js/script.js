@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const locationInput = document.getElementById('locationInput');
+    const locationInput = document.getElementById('cityInput'); // 修改为HTML中的实际ID
     const searchBtn = document.getElementById('searchBtn');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const errorMessage = document.getElementById('errorMessage');
-    const weatherCards = document.querySelectorAll('.weather-card:not(#loadingIndicator):not(#errorMessage)');
+    const loadingIndicator = document.getElementById('loading'); // 修改为HTML中的实际ID
+    const errorMessage = document.getElementById('error'); // 修改为HTML中的实际ID
+    const weatherCards = document.querySelectorAll('.weather-card:not(#loading):not(#error)'); // 修改为HTML中的实际ID
 
     // 天气图标映射表
     const weatherIconMap = {
@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 初始加载示例数据
-    fetchWeatherData();
+    // 删除初始调用，因为用户可能还没有输入城市
+    // fetchWeatherData();
 
     function fetchWeatherData() {
         const location = locationInput.value.trim();
@@ -77,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('获取天气数据失败:', error);
-                showError();
+                showError(error.message);
             });
     }
 
@@ -90,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('updateTime').textContent = formatDateTime(data.updateTime);
         document.getElementById('obsTime').textContent = formatDateTime(now.obsTime);
         document.getElementById('temperature').textContent = now.temp;
-        document.getElementById('weatherText').textContent = now.text;
+        document.getElementById('condition').textContent = now.text; // 修改为HTML中的实际ID
         document.getElementById('feelsLike').textContent = `体感 ${now.feelsLike}°C`;
         document.getElementById('humidity').textContent = `湿度 ${now.humidity}%`;
         document.getElementById('windDir').innerHTML = `<i class="fa fa-location-arrow text-primary"></i> ${now.windDir}`;
@@ -106,9 +107,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 更新天气图标
         updateWeatherIcon(now.icon);
+        
+        // 更新详情链接
+        if (data.fxLink) {
+            document.getElementById('detailLink').href = data.fxLink;
+        }
     }
 
     function updateWeatherIcon(iconCode) {
+        console.log('Weather Icon Code:', iconCode); // 调试：打印天气代码
         const iconElement = document.getElementById('weatherIcon').querySelector('i');
         const iconClass = weatherIconMap[iconCode] || 'fa-question-circle';
         
@@ -122,7 +129,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showLoading() {
-        weatherCards.forEach(card => card.classList.add('hidden'));
+        // 隐藏所有天气卡片
+        document.getElementById('weatherResult').classList.add('hidden');
+        document.getElementById('detailedWeather').classList.add('hidden');
         errorMessage.classList.add('hidden');
         loadingIndicator.classList.remove('hidden');
     }
@@ -130,12 +139,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideLoading() {
         loadingIndicator.classList.add('hidden');
         errorMessage.classList.add('hidden');
-        weatherCards.forEach(card => card.classList.remove('hidden'));
+        // 显示天气卡片
+        document.getElementById('weatherResult').classList.remove('hidden');
+        document.getElementById('detailedWeather').classList.remove('hidden');
     }
 
-    function showError() {
+    function showError(message) {
         loadingIndicator.classList.add('hidden');
-        weatherCards.forEach(card => card.classList.add('hidden'));
+        document.getElementById('weatherResult').classList.add('hidden');
+        document.getElementById('detailedWeather').classList.add('hidden');
         errorMessage.classList.remove('hidden');
+        document.getElementById('errorMessage').textContent = message || '获取天气数据失败';
     }
 });
