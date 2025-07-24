@@ -1,0 +1,25 @@
+# 天气查询应用配置文件
+
+# 调试模式
+debug: false
+
+# 服务器配置
+server:
+  host: 0.0.0.0
+  port: 5001
+
+# 天气API配置
+weather_api:
+  # 和风天气API Key (需要在https://dev.qweather.com/注册获取)
+  key: YOUR_HEFENG_WEATHER_API_KEY
+  # 实时天气API URL (不带协议)
+  url: devapi.qweather.com
+
+# 日志配置
+log:
+  level: INFO
+  file: logs/app.log
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# 其他配置项可以在这里添加

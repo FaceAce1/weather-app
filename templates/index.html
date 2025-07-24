@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时天气查询工具</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>实时天气查询</h1>
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="请输入城市名称">
+            <button id="searchBtn">查询天气</button>
+        </div>
+        <div id="loading" class="loading hidden">查询中...</div>
+        <div id="error" class="error hidden"></div>
+        <div id="weatherResult" class="weather-result hidden">
+            <h2 id="cityName"></h2>
+            <div class="weather-info">
+                <div class="temperature">
+                    <span id="temperature"></span>°C
+                </div>
+                <div class="condition">
+                    <img id="weatherIcon" src="" alt="天气图标" class="weather-icon">
+                    <span id="condition"></span>
+                </div>
+                <div class="details">
+                    <div class="detail-item">
+                        <span class="label">风向:</span>
+                        <span id="windDir"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">风力:</span>
+                        <span id="windScale"></span> 级
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">湿度:</span>
+                        <span id="humidity"></span>%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

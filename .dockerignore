@@ -1,0 +1,23 @@
+# 忽略版本控制目录
+.git/
+.github/
+
+# 忽略虚拟环境
+venv/
+env/
+.venv/
+.env/
+
+# 忽略日志文件
+logs/
+
+# 忽略配置文件
+config/config.yaml
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db
+
+# 忽略IDE配置
+.vscode/
+.idea/
