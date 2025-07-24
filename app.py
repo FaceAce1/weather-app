@@ -19,12 +19,12 @@ config = load_config()
 logger = setup_logger(config)
 
 # 打印配置信息用于调试
-print("Loaded configuration:")
+logger.debug("Loaded configuration:")
 for key, value in config.items():
     if key != 'weather_api':  # 避免打印API密钥
-        print(f"  {key}: {value}")
+        logger.debug(f"  {key}: {value}")
 
-print(f"  weather_api: {{'url': '{config.get('weather_api', {}).get('url', 'N/A')}'}}")
+logger.debug(f"  weather_api: {{'url': '{config.get('weather_api', {}).get('url', 'N/A')}'}}")
 
 @app.route('/')
 def index():
@@ -32,34 +32,83 @@ def index():
     logger.info("Home page accessed")
     return render_template('index.html')
 
-@app.route('/api/weather')
-def weather():
-    """获取天气数据API"""
-    city = request.args.get('city')
-    
-    # 尝试解码可能被错误编码的URL参数
-    if city:
+@app.route('/api/get_weather', methods=['POST'])
+def get_weather():
+    """获取天气数据API - 支持完整数据返回"""
+    try:
+        data = request.json
+        city = data.get('city', '').strip()
+        
+        if not city:
+            logger.warning("Missing city parameter in request")
+            return jsonify({
+                'status': 'error',
+                'error': 'City parameter is required',
+                'message': '请输入城市名称'
+            }), 400
+        
+        # 尝试解码可能被错误编码的城市名
         try:
             city = urllib.parse.unquote(city)
-        except Exception:
-            pass
-    
-    if not city:
-        logger.warning("Missing city parameter in request")
-        return jsonify({'error': 'City parameter is required'}), 400
-    
-    try:
+        except Exception as e:
+            logger.warning(f"Error decoding city name: {str(e)}")
+        
         logger.info(f"Fetching weather data for city: {city}")
         weather_data = get_weather_data(city, config)
         logger.info(f"Successfully fetched weather data for city: {city}")
-        return jsonify(weather_data)
+        
+        return jsonify({
+            'status': 'success',
+            'data': weather_data
+        })
+        
+    except ValueError as e:
+        logger.warning(f"Validation error: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Validation Error',
+            'message': str(e)
+        }), 400
     except Exception as e:
-        logger.error(f"Error fetching weather data for city {city}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching weather data: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Server Error',
+            'message': '获取天气数据失败，请稍后重试'
+        }), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'status': 'error',
+        'error': 'Not Found',
+        'message': '请求的资源不存在'
+    }), 404
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({
+        'status': 'error',
+        'error': 'Method Not Allowed',
+        'message': '不支持的请求方法'
+    }), 405
 
 if __name__ == '__main__':
     host = config.get('server', {}).get('host', '127.0.0.1')
     port = config.get('server', {}).get('port', 5001)
     
+    # 确保端口是整数
+    try:
+        port = int(port)
+    except (ValueError, TypeError):
+        port = 5001
+        logger.warning(f"Invalid port value, using default: {port}")
+    
     logger.info(f"Starting server on {host}:{port}")
-    app.run(host=host, port=port, debug=config.get('debug', False))
+    # 生产环境强制关闭调试模式
+    debug_mode = config.get('debug', False)
+    if os.getenv('FLASK_ENV') == 'production' or os.getenv('ENV') == 'prod':
+        debug_mode = False
+        logger.info("Production environment detected, debug mode disabled")
+    
+    app.run(host=host, port=port, debug=debug_mode)
