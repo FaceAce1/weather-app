@@ -44,7 +44,7 @@
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-inter text-dark p-4 md:p-6">
     <div class="max-w-4xl mx-auto">
-        <!-- 头部搜索区域 -->
+        <!-- 头部搜索区域 - 支持城市名和经纬度 -->
         <div class="mb-6">
             <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-center text-dark mb-4">实时天气查询</h1>
             <div class="flex flex-col sm:flex-row gap-3">
@@ -52,7 +52,7 @@
                     <input 
                         type="text" 
                         id="cityInput"
-                        placeholder="输入城市名（例如：北京）" 
+                        placeholder="输入城市名或经纬度（例如：北京 或 116.41,39.92）" 
                         class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all pl-10"
                     >
                     <i class="fa fa-map-marker absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -67,13 +67,16 @@
         <!-- 主要天气卡片 -->
         <div id="weatherResult" class="weather-card mb-6 hidden">
             <div class="p-5 md:p-6">
-                <!-- 城市和更新时间 -->
+                <!-- 城市和更新时间 - 增加观测时间 -->
                 <div class="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-2">
                     <div>
                         <h2 id="cityName" class="text-[clamp(1.3rem,3vw,1.8rem)] font-bold"></h2>
-                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                        <div class="flex items-center text-sm text-gray-500 mt-1 flex-wrap">
                             <span>数据更新于: </span>
                             <span id="updateTime" class="ml-1"></span>
+                            <span class="mx-2">|</span>
+                            <span>观测时间: </span>
+                            <span id="obsTime" class="ml-1"></span>
                         </div>
                     </div>
                     <div class="data-pill flex items-center gap-1">
@@ -90,7 +93,7 @@
                         </div>
                         <div>
                             <div id="condition" class="text-[clamp(1.2rem,3vw,1.5rem)] font-semibold mb-1"></div>
-                            <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-4 flex-wrap">
                                 <div class="flex items-center gap-1">
                                     <i class="fa fa-thermometer-half text-accent"></i>
                                     <span id="feelsLike" class="text-gray-600"></span>
@@ -110,24 +113,68 @@
                     </div>
                 </div>
 
-                <!-- 关键天气数据 -->
+                <!-- 关键天气数据 - 增加气压和能见度 -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div class="stat-card">
                         <div class="text-gray-500 text-sm mb-1">风向</div>
                         <div id="windDir" class="font-medium flex items-center gap-1">
                             <i class="fa fa-location-arrow text-primary"></i>
                         </div>
+                        <div class="text-xs text-gray-500 mt-1">360°: <span id="wind360"></span></div>
                     </div>
                     <div class="stat-card">
                         <div class="text-gray-500 text-sm mb-1">风力</div>
                         <div id="windScale" class="font-medium"></div>
+                        <div class="text-xs text-gray-500 mt-1">风速: <span id="windSpeed"></span> km/h</div>
                     </div>
                     <div class="stat-card">
-                        <div class="text-gray-500 text-sm mb-1">湿度</div>
-                        <div id="humidityValue" class="font-medium flex items-center gap-1">
-                            <i class="fa fa-tint text-primary"></i>
+                        <div class="text-gray-500 text-sm mb-1">气压</div>
+                        <div id="pressure" class="font-medium flex items-center gap-1">
+                            <i class="fa fa-dashboard text-primary"></i>
                         </div>
                     </div>
+                    <div class="stat-card">
+                        <div class="text-gray-500 text-sm mb-1">能见度</div>
+                        <div id="visibility" class="font-medium flex items-center gap-1">
+                            <i class="fa fa-eye text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增详细天气数据卡片 -->
+        <div id="detailedWeather" class="weather-card hidden">
+            <div class="p-5 md:p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i class="fa fa-list-alt text-primary"></i>
+                    详细天气数据
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                    <div class="info-row">
+                        <span class="text-gray-600">过去1小时降水量</span>
+                        <span id="precip" class="font-medium"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="text-gray-600">云量</span>
+                        <span id="cloud" class="font-medium"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="text-gray-600">露点温度</span>
+                        <span id="dew" class="font-medium"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="text-gray-600">数据来源</span>
+                        <span id="sources" class="font-medium text-sm"></span>
+                    </div>
+                </div>
+                
+                <div class="mt-5 pt-4 border-t border-gray-100 text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center gap-2">
+                    <a id="detailLink" href="#" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                        <i class="fa fa-external-link"></i>
+                        <span>查看详情页面</span>
+                    </a>
+                    <span id="licenseInfo">数据许可: QWeather Developers License</span>
                 </div>
             </div>
         </div>

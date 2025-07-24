@@ -33,29 +33,28 @@ def index():
     return render_template('index.html')
 
 @app.route('/api/weather', methods=['GET'])
-def get_weather():
-    # 从URL参数中获取城市名（与前端fetch一致）
-    city = request.args.get('city', '').strip()
+def weather():
+    """获取天气数据API"""
+    city = request.args.get('city')
+    
+    if city:
+        try:
+            city = urllib.parse.unquote(city)
+        except Exception:
+            pass
     
     if not city:
-        logger.warning("城市名未提供")
-        return jsonify({
-            'error': '城市名未提供',
-            'message': '请输入城市名'
-        }), 400
+        logger.warning("请求中缺少城市参数")
+        return jsonify({'error': '请提供城市名称'}), 400
     
     try:
-        # 调用优化后的get_weather_data，获取完整天气数据
-        # 包含温度、体感、风向、气压、能见度等所有字段
+        logger.info(f"获取城市天气数据: {city}")
         weather_data = get_weather_data(city, config)
-        logger.info(f"成功获取完整天气数据: {city}")
-        return jsonify(weather_data)  # 直接返回原始数据，与前端预期结构一致
+        logger.info(f"成功获取城市天气数据: {city}")
+        return jsonify(weather_data)
     except Exception as e:
         logger.error(f"获取天气数据失败: {str(e)}")
-        return jsonify({
-            'error': str(e),
-            'message': '未能获取天气信息'
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.errorhandler(404)
 def not_found(error):

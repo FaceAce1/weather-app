@@ -1,11 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const cityInput = document.getElementById('cityInput');
+    const locationInput = document.getElementById('locationInput');
     const searchBtn = document.getElementById('searchBtn');
-    const loadingElement = document.getElementById('loading');
-    const errorElement = document.getElementById('error');
-    const errorMessageElement = document.getElementById('errorMessage');
-    const weatherResult = document.getElementById('weatherResult');
-    
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const errorMessage = document.getElementById('errorMessage');
+    const weatherCards = document.querySelectorAll('.weather-card:not(#loadingIndicator):not(#errorMessage)');
+
     // 天气图标映射表
     const weatherIconMap = {
         "100": "fa-sun-o",      // 晴
@@ -41,96 +40,102 @@ document.addEventListener('DOMContentLoaded', function() {
         "900": "fa-sun-o"       // 热
     };
 
-    // 搜索按钮点击事件
-    searchBtn.addEventListener('click', searchWeather);
-    
-    // 回车键搜索
-    cityInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchWeather();
+    // 事件监听
+    searchBtn.addEventListener('click', fetchWeatherData);
+    locationInput.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            fetchWeatherData();
         }
     });
-    
-    function searchWeather() {
-        const city = cityInput.value.trim();
-        
-        if (!city) {
-            showError('请输入城市名称');
+
+    // 初始加载示例数据
+    fetchWeatherData();
+
+    function fetchWeatherData() {
+        const location = locationInput.value.trim();
+        if (!location) {
+            alert('请输入城市名或经纬度');
             return;
         }
-        
-        // 显示加载状态
+
         showLoading();
-        hideError();
-        hideWeatherResult();
-        
-        // 调用API获取天气数据
-        fetch(`/api/weather?city=${encodeURIComponent(city)}`)
-            .then(response => response.json())
-            .then(data => {
-                hideLoading();
-                
-                if (data.error) {
-                    showError(data.error);
-                } else {
-                    // 添加当前时间作为更新时间
-                    data.updateTime = new Date().toISOString().replace('T', ' ').split('.')[0];
-                    showWeatherResult(data);
+
+        // 调用后端API
+        fetch(`/api/weather?city=${encodeURIComponent(location)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应异常');
                 }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                displayWeatherData(data);
+                hideLoading();
             })
             .catch(error => {
-                hideLoading();
-                showError('网络错误，请稍后重试');
-                console.error('Error fetching weather data:', error);
+                console.error('获取天气数据失败:', error);
+                showError();
             });
     }
-    
-    function showLoading() {
-        loadingElement.classList.remove('hidden');
-    }
-    
-    function hideLoading() {
-        loadingElement.classList.add('hidden');
-    }
-    
-    function showError(message) {
-        errorMessageElement.textContent = message;
-        errorElement.classList.remove('hidden');
-    }
-    
-    function hideError() {
-        errorElement.classList.add('hidden');
-    }
-    
-    function showWeatherResult(data) {
+
+    function displayWeatherData(data) {
+        const now = data.now;
+        const refer = data.refer || {};
+        
         // 更新DOM元素
-        document.getElementById('cityName').textContent = data.city;
-        document.getElementById('updateTime').textContent = data.updateTime;
-        document.getElementById('temperature').textContent = data.temperature;
-        document.getElementById('condition').textContent = data.condition;
-        document.getElementById('feelsLike').textContent = `体感 ${data.temperature}°C`;
-        document.getElementById('humidity').textContent = `湿度 ${data.humidity}%`;
-        document.getElementById('windDir').innerHTML = `<i class="fa fa-location-arrow text-primary"></i> ${data.wind_dir}`;
-        document.getElementById('windScale').textContent = `${data.wind_scale}级`;
-        document.getElementById('humidityValue').innerHTML = `<i class="fa fa-tint text-primary"></i> ${data.humidity}%`;
+        document.getElementById('cityName').textContent = data.city || locationInput.value.trim();
+        document.getElementById('updateTime').textContent = formatDateTime(data.updateTime);
+        document.getElementById('obsTime').textContent = formatDateTime(now.obsTime);
+        document.getElementById('temperature').textContent = now.temp;
+        document.getElementById('weatherText').textContent = now.text;
+        document.getElementById('feelsLike').textContent = `体感 ${now.feelsLike}°C`;
+        document.getElementById('humidity').textContent = `湿度 ${now.humidity}%`;
+        document.getElementById('windDir').innerHTML = `<i class="fa fa-location-arrow text-primary"></i> ${now.windDir}`;
+        document.getElementById('wind360').textContent = now.wind360;
+        document.getElementById('windScale').textContent = `${now.windScale}级`;
+        document.getElementById('windSpeed').textContent = now.windSpeed;
+        document.getElementById('pressure').innerHTML = `<i class="fa fa-dashboard text-primary"></i> ${now.pressure} hPa`;
+        document.getElementById('visibility').innerHTML = `<i class="fa fa-eye text-primary"></i> ${now.vis} km`;
+        document.getElementById('precip').textContent = `${now.precip} mm`;
+        document.getElementById('cloud').textContent = now.cloud ? `${now.cloud}%` : '无数据';
+        document.getElementById('dew').textContent = now.dew ? `${now.dew}°C` : '无数据';
+        document.getElementById('sources').textContent = refer.sources ? refer.sources.join(', ') : '未知';
 
         // 更新天气图标
-        updateWeatherIcon(data.icon);
-        
-        weatherResult.classList.remove('hidden');
+        updateWeatherIcon(now.icon);
     }
-    
+
     function updateWeatherIcon(iconCode) {
         const iconElement = document.getElementById('weatherIcon').querySelector('i');
         const iconClass = weatherIconMap[iconCode] || 'fa-question-circle';
         
-        // 移除所有图标类
-        iconElement.className = '';
-        // 添加新的图标类
         iconElement.className = `fa ${iconClass}`;
     }
-    
-    function hideWeatherResult() {
-        weatherResult.classList.add('hidden');
+
+    function formatDateTime(dateTimeString) {
+        if (!dateTimeString) return '未知时间';
+        // 将"2020-06-30T22:00+08:00"格式化为"2020-06-30 22:00"
+        return dateTimeString.replace('T', ' ').split('+')[0];
+    }
+
+    function showLoading() {
+        weatherCards.forEach(card => card.classList.add('hidden'));
+        errorMessage.classList.add('hidden');
+        loadingIndicator.classList.remove('hidden');
+    }
+
+    function hideLoading() {
+        loadingIndicator.classList.add('hidden');
+        errorMessage.classList.add('hidden');
+        weatherCards.forEach(card => card.classList.remove('hidden'));
+    }
+
+    function showError() {
+        loadingIndicator.classList.add('hidden');
+        weatherCards.forEach(card => card.classList.add('hidden'));
+        errorMessage.classList.remove('hidden');
     }
 });
